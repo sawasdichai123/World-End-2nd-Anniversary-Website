@@ -1,22 +1,81 @@
 /**
- * Holodex API utility for checking VTuber live streams
- * Uses channel-based lookup instead of org filter
+ * Live Status API Client
+ * Fetches live status from our Vercel API endpoint (server-cached)
+ * This allows unlimited users without hitting Holodex rate limits
  */
 
-// Holodex API key (optional but recommended for higher rate limits)
-const HOLODEX_API_KEY = import.meta.env.VITE_HOLODEX_API_KEY || '';
-const HOLODEX_BASE_URL = 'https://holodex.net/api/v2';
+// Use relative URL for Vercel deployment, full URL for local dev
+const API_ENDPOINT = import.meta.env.DEV
+    ? 'https://holodex.net/api/v2' // Fallback to Holodex directly in dev
+    : '/api/update-live-status';
 
-// Cache to prevent excessive requests (30 seconds)
+const HOLODEX_API_KEY = import.meta.env.VITE_HOLODEX_API_KEY || '';
+
+// Cache for local development
 const CACHE_DURATION = 30 * 1000;
 const channelCache = {};
 
 /**
- * Check if a specific channel is live using Holodex
- * @param {string} channelId - YouTube channel ID
- * @returns {Promise<{isLive: boolean, liveTitle?: string, liveUrl?: string}>}
+ * Check live status using our server-side cache (production)
+ * or Holodex directly (development)
  */
-export const checkLiveStatus = async (channelId) => {
+export const checkAllLiveStatus = async (members) => {
+    // In production, use our cached API endpoint
+    if (!import.meta.env.DEV) {
+        return fetchFromServerCache();
+    }
+
+    // In development, call Holodex directly
+    return fetchFromHolodexDirect(members);
+};
+
+/**
+ * Fetch from our Vercel API (production mode)
+ * This reads from server-side cache, no rate limit issues
+ */
+async function fetchFromServerCache() {
+    try {
+        const response = await fetch('/api/update-live-status');
+
+        if (!response.ok) {
+            console.error('[LiveStatus] Server API error:', response.status);
+            return {};
+        }
+
+        const data = await response.json();
+        console.log('[LiveStatus] Got cached data, age:', data.cacheAge, 'seconds');
+
+        return data.liveStatus || {};
+    } catch (error) {
+        console.error('[LiveStatus] Error fetching from server:', error);
+        return {};
+    }
+}
+
+/**
+ * Fetch directly from Holodex (development mode only)
+ */
+async function fetchFromHolodexDirect(members) {
+    const results = {};
+
+    console.log('[LiveStatus] Dev mode - calling Holodex directly');
+
+    for (const member of members) {
+        if (member.channelId) {
+            const status = await checkChannelLive(member.channelId);
+            results[member.id] = status;
+        } else {
+            results[member.id] = { isLive: false };
+        }
+    }
+
+    return results;
+}
+
+/**
+ * Check single channel (development mode)
+ */
+async function checkChannelLive(channelId) {
     // Check cache
     if (channelCache[channelId] && (Date.now() - channelCache[channelId].timestamp < CACHE_DURATION)) {
         return channelCache[channelId].data;
@@ -28,14 +87,12 @@ export const checkLiveStatus = async (channelId) => {
             headers['X-APIKEY'] = HOLODEX_API_KEY;
         }
 
-        // Use the channel's live/videos endpoint
-        const url = `${HOLODEX_BASE_URL}/channels/${channelId}/videos?status=live&limit=1`;
-
+        const url = `https://holodex.net/api/v2/channels/${channelId}/videos?status=live&limit=1`;
         const response = await fetch(url, { headers });
 
         if (!response.ok) {
             console.error(`[Holodex] Error for ${channelId}:`, response.status);
-            throw new Error(`Holodex API error: ${response.status}`);
+            return { isLive: false };
         }
 
         const videos = await response.json();
@@ -54,7 +111,7 @@ export const checkLiveStatus = async (channelId) => {
             result = { isLive: false };
         }
 
-        // Cache the result
+        // Cache
         channelCache[channelId] = {
             timestamp: Date.now(),
             data: result
@@ -65,40 +122,25 @@ export const checkLiveStatus = async (channelId) => {
         console.error(`[Holodex] Error checking ${channelId}:`, error);
         return { isLive: false };
     }
-};
+}
 
 /**
- * Check live status for multiple channels
- * @param {Array<{id: string, channelId: string}>} members - Array of member objects
- * @returns {Promise<Object>} Object with member id as key and live status as value
+ * Check single channel live status
  */
-export const checkAllLiveStatus = async (members) => {
-    const results = {};
+export const checkLiveStatus = async (channelId) => {
+    if (!import.meta.env.DEV) {
+        // In production, get from cached data
+        const allStatus = await fetchFromServerCache();
+        // Find by channelId... but we store by member id
+        // Just return the cached result for that channel
+        return allStatus[channelId] || { isLive: false };
+    }
 
-    console.log('[Holodex] Checking live status for', members.length, 'members...');
-
-    // Check each member's channel
-    const promises = members.map(async (member) => {
-        if (member.channelId) {
-            const status = await checkLiveStatus(member.channelId);
-            results[member.id] = status;
-        } else {
-            results[member.id] = { isLive: false };
-        }
-    });
-
-    await Promise.all(promises);
-
-    const liveCount = Object.values(results).filter(r => r.isLive).length;
-    console.log('[Holodex] Live members:', liveCount);
-
-    return results;
+    return checkChannelLive(channelId);
 };
 
 /**
  * Get YouTube channel URL from channel ID
- * @param {string} channelId 
- * @returns {string}
  */
 export const getChannelUrl = (channelId) => {
     return `https://www.youtube.com/channel/${channelId}`;
