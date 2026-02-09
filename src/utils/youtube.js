@@ -1,94 +1,63 @@
 /**
- * Live Status API Client
- * Fetches live status from our Vercel API endpoint (server-cached)
- * This allows unlimited users without hitting Holodex rate limits
+ * Live Status & Videos API Client
+ * Uses Holodex API directly (no backend needed)
+ * Holodex has generous rate limits and allows CORS
  */
-
-// Use relative URL for Vercel deployment, full URL for local dev
-const API_ENDPOINT = import.meta.env.DEV
-    ? 'https://holodex.net/api/v2' // Fallback to Holodex directly in dev
-    : '/api/update-live-status';
 
 const HOLODEX_API_KEY = import.meta.env.VITE_HOLODEX_API_KEY || '';
+const HOLODEX_BASE_URL = 'https://holodex.net/api/v2';
 
-// Cache for local development
-const CACHE_DURATION = 30 * 1000;
-const channelCache = {};
+// Cache for live status (30 seconds)
+const LIVE_CACHE_DURATION = 30 * 1000;
+// Cache for videos (10 minutes - they don't change often)
+const VIDEO_CACHE_DURATION = 10 * 60 * 1000;
 
-/**
- * Check live status using our server-side cache (production)
- * or Holodex directly (development)
- */
-export const checkAllLiveStatus = async (members) => {
-    // In production, use our cached API endpoint
-    if (!import.meta.env.DEV) {
-        return fetchFromServerCache();
-    }
-
-    // In development, call Holodex directly
-    return fetchFromHolodexDirect(members);
-};
+const liveStatusCache = {};
+const videosCache = {};
 
 /**
- * Fetch from our Vercel API (production mode)
- * This reads from server-side cache, no rate limit issues
+ * Get headers for Holodex API
  */
-async function fetchFromServerCache() {
-    try {
-        const response = await fetch('/api/update-live-status');
-
-        if (!response.ok) {
-            console.error('[LiveStatus] Server API error:', response.status);
-            return {};
-        }
-
-        const data = await response.json();
-        console.log('[LiveStatus] Got cached data, age:', data.cacheAge, 'seconds');
-
-        return data.liveStatus || {};
-    } catch (error) {
-        console.error('[LiveStatus] Error fetching from server:', error);
-        return {};
+function getHeaders() {
+    const headers = {};
+    if (HOLODEX_API_KEY) {
+        headers['X-APIKEY'] = HOLODEX_API_KEY;
     }
+    return headers;
 }
 
 /**
- * Fetch directly from Holodex (development mode only)
+ * Check live status for all members
  */
-async function fetchFromHolodexDirect(members) {
+export const checkAllLiveStatus = async (members) => {
     const results = {};
 
-    console.log('[LiveStatus] Dev mode - calling Holodex directly');
+    console.log('[Holodex] Checking live status for', members.length, 'members...');
 
     for (const member of members) {
         if (member.channelId) {
-            const status = await checkChannelLive(member.channelId);
-            results[member.id] = status;
+            results[member.id] = await checkChannelLive(member.channelId);
         } else {
             results[member.id] = { isLive: false };
         }
     }
 
     return results;
-}
+};
 
 /**
- * Check single channel (development mode)
+ * Check if a channel is live
  */
 async function checkChannelLive(channelId) {
     // Check cache
-    if (channelCache[channelId] && (Date.now() - channelCache[channelId].timestamp < CACHE_DURATION)) {
-        return channelCache[channelId].data;
+    const cached = liveStatusCache[channelId];
+    if (cached && (Date.now() - cached.timestamp < LIVE_CACHE_DURATION)) {
+        return cached.data;
     }
 
     try {
-        const headers = {};
-        if (HOLODEX_API_KEY) {
-            headers['X-APIKEY'] = HOLODEX_API_KEY;
-        }
-
-        const url = `https://holodex.net/api/v2/channels/${channelId}/videos?status=live&limit=1`;
-        const response = await fetch(url, { headers });
+        const url = `${HOLODEX_BASE_URL}/channels/${channelId}/videos?status=live&limit=1`;
+        const response = await fetch(url, { headers: getHeaders() });
 
         if (!response.ok) {
             console.error(`[Holodex] Error for ${channelId}:`, response.status);
@@ -112,7 +81,7 @@ async function checkChannelLive(channelId) {
         }
 
         // Cache
-        channelCache[channelId] = {
+        liveStatusCache[channelId] = {
             timestamp: Date.now(),
             data: result
         };
@@ -125,19 +94,66 @@ async function checkChannelLive(channelId) {
 }
 
 /**
- * Check single channel live status
+ * Fetch recent videos for all members (for video grid background)
  */
-export const checkLiveStatus = async (channelId) => {
-    if (!import.meta.env.DEV) {
-        // In production, get from cached data
-        const allStatus = await fetchFromServerCache();
-        // Find by channelId... but we store by member id
-        // Just return the cached result for that channel
-        return allStatus[channelId] || { isLive: false };
+export const fetchAllMemberVideos = async (members, videosPerMember = 9) => {
+    const results = {};
+
+    console.log('[Holodex] Fetching videos for', members.length, 'members...');
+
+    for (const member of members) {
+        if (member.channelId) {
+            results[member.id] = await fetchChannelVideos(member.channelId, videosPerMember);
+        } else {
+            results[member.id] = [];
+        }
     }
 
-    return checkChannelLive(channelId);
+    return results;
 };
+
+/**
+ * Fetch videos for a single channel
+ */
+async function fetchChannelVideos(channelId, limit = 9) {
+    // Check cache
+    const cached = videosCache[channelId];
+    if (cached && (Date.now() - cached.timestamp < VIDEO_CACHE_DURATION)) {
+        return cached.data;
+    }
+
+    try {
+        const url = `${HOLODEX_BASE_URL}/channels/${channelId}/videos?type=stream,video&status=past&limit=${limit}`;
+        const response = await fetch(url, { headers: getHeaders() });
+
+        if (!response.ok) {
+            console.error(`[Holodex] Error fetching videos for ${channelId}:`, response.status);
+            return [];
+        }
+
+        const videos = await response.json();
+
+        const result = videos.map(video => ({
+            id: video.id,
+            title: video.title,
+            thumbnail: `https://img.youtube.com/vi/${video.id}/mqdefault.jpg`,
+            duration: video.duration,
+            publishedAt: video.published_at || video.available_at
+        }));
+
+        // Cache
+        videosCache[channelId] = {
+            timestamp: Date.now(),
+            data: result
+        };
+
+        console.log(`[Holodex] Got ${result.length} videos for ${channelId}`);
+        return result;
+    } catch (error) {
+        console.error(`[Holodex] Error fetching videos for ${channelId}:`, error);
+        return [];
+    }
+}
 
 /**
  * Get YouTube channel URL from channel ID

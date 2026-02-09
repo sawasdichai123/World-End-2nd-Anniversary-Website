@@ -3,7 +3,7 @@ import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { motion } from 'framer-motion'
 import { members } from '../data'
-import { checkAllLiveStatus, getChannelUrl } from '../utils/youtube'
+import { checkAllLiveStatus, fetchAllMemberVideos, getChannelUrl } from '../utils/youtube'
 import VideoGrid from './VideoGrid'
 import './CharacterShowcase.css'
 
@@ -34,14 +34,9 @@ function CharacterShowcase() {
     useEffect(() => {
         const fetchVideos = async () => {
             try {
-                // In production, use our API; in dev, skip video grid
-                if (!import.meta.env.DEV) {
-                    const response = await fetch('/api/member-videos')
-                    if (response.ok) {
-                        const data = await response.json()
-                        setMemberVideos(data.videos || {})
-                    }
-                }
+                // Fetch videos from Holodex directly
+                const videos = await fetchAllMemberVideos(members, 9)
+                setMemberVideos(videos)
             } catch (error) {
                 console.error('Error fetching member videos:', error)
             }
