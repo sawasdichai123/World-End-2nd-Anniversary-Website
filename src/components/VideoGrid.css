@@ -3,7 +3,8 @@
     position: absolute;
     inset: 0;
     overflow: hidden;
-    z-index: 0;
+    z-index: -1;
+    /* Behind everything */
     pointer-events: none;
     opacity: 0;
     transition: opacity 1s ease-in-out;
@@ -17,38 +18,32 @@
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     grid-template-rows: repeat(3, 1fr);
-    width: calc(100% + 80px);
-    height: calc(100% + 80px);
-    margin: -40px;
+    width: calc(100% + 100px);
+    height: calc(100% + 100px);
+    margin: -50px;
     gap: 0;
 }
 
 .video-cell {
     position: relative;
-    overflow: hidden;
+    overflow: visible;
     background: rgba(0, 0, 0, 0.5);
     animation: cellFadeIn 0.8s ease-out forwards;
     opacity: 0;
-    transform: scale(1.1);
 }
 
 @keyframes cellFadeIn {
     to {
         opacity: 1;
-        transform: scale(1);
     }
 }
 
 .video-thumbnail {
-    width: 100%;
-    height: 100%;
+    width: calc(100% + 4px);
+    height: calc(100% + 4px);
+    margin: -2px;
     object-fit: cover;
-    transition: transform 8s ease-in-out;
-}
-
-/* Subtle zoom animation on thumbnails */
-.video-cell:hover .video-thumbnail {
-    transform: scale(1.1);
+    display: block;
 }
 
 /* Continuous slow animation for all thumbnails */
@@ -62,7 +57,7 @@
 
 @keyframes slowZoom {
     from {
-        transform: scale(1);
+        transform: scale(1.02);
     }
 
     to {
@@ -75,34 +70,10 @@
     position: absolute;
     inset: 0;
     background: linear-gradient(135deg,
-            rgba(10, 10, 15, 0.85) 0%,
-            rgba(10, 10, 15, 0.7) 50%,
-            rgba(10, 10, 15, 0.85) 100%);
-    z-index: 1;
-}
-
-/* Animated color wash effect */
-.video-grid::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(45deg,
-            rgba(var(--theme-color-rgb, 100, 100, 255), 0.15) 0%,
-            transparent 50%,
-            rgba(var(--accent-color-rgb, 255, 100, 100), 0.1) 100%);
-    z-index: 2;
-    pointer-events: none;
-    animation: colorWash 10s ease-in-out infinite alternate;
-}
-
-@keyframes colorWash {
-    from {
-        opacity: 0.5;
-    }
-
-    to {
-        opacity: 0.8;
-    }
+            rgba(10, 10, 15, 0.88) 0%,
+            rgba(10, 10, 15, 0.75) 50%,
+            rgba(10, 10, 15, 0.88) 100%);
+    z-index: 0;
 }
 
 /* Hide on mobile for performance */
