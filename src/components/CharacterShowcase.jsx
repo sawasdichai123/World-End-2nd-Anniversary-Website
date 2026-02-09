@@ -4,6 +4,7 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { motion } from 'framer-motion'
 import { members } from '../data'
 import { checkAllLiveStatus, getChannelUrl } from '../utils/youtube'
+import VideoGrid from './VideoGrid'
 import './CharacterShowcase.css'
 
 gsap.registerPlugin(ScrollTrigger)
@@ -13,6 +14,7 @@ function CharacterShowcase() {
     const containerRef = useRef(null)
     const [activeIndex, setActiveIndex] = useState(0)
     const [liveStatus, setLiveStatus] = useState({})
+    const [memberVideos, setMemberVideos] = useState({})
 
     // Check live status on mount and periodically
     useEffect(() => {
@@ -26,6 +28,26 @@ function CharacterShowcase() {
         // Refresh every 60 seconds
         const interval = setInterval(checkStatus, 60 * 1000)
         return () => clearInterval(interval)
+    }, [])
+
+    // Fetch member videos on mount (for background grid)
+    useEffect(() => {
+        const fetchVideos = async () => {
+            try {
+                // In production, use our API; in dev, skip video grid
+                if (!import.meta.env.DEV) {
+                    const response = await fetch('/api/member-videos')
+                    if (response.ok) {
+                        const data = await response.json()
+                        setMemberVideos(data.videos || {})
+                    }
+                }
+            } catch (error) {
+                console.error('Error fetching member videos:', error)
+            }
+        }
+
+        fetchVideos()
     }, [])
 
     useEffect(() => {
@@ -110,22 +132,16 @@ function CharacterShowcase() {
                                 className={`character-card ${activeIndex === index ? 'active' : ''}`}
                                 style={{ '--theme-color': member.themeColor, '--accent-color': member.accentColor }}
                             >
+                                {/* Video Grid Background */}
+                                {memberVideos[member.id]?.length > 0 && (
+                                    <VideoGrid
+                                        memberId={member.id}
+                                        videos={memberVideos[member.id]}
+                                    />
+                                )}
                                 {/* Character Image */}
                                 <div className="character-image-wrapper">
                                     <div className="character-glow" />
-
-                                    {/* Live Badge on Image */}
-                                    {isLive && (
-                                        <a
-                                            href={memberLive.liveUrl}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="live-badge-image"
-                                        >
-                                            <span className="live-dot" />
-                                            <span>LIVE NOW</span>
-                                        </a>
-                                    )}
 
                                     <img
                                         src={member.image}
