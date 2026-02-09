@@ -2,46 +2,46 @@ import { useState, useEffect } from 'react'
 import './VideoGrid.css'
 
 /**
- * VideoGrid Component
- * Displays a 3x3 grid of YouTube video embeds as background
- * Videos are muted, looping, and non-interactive
+ * VideoGrid Component - Lightweight Thumbnail Version
+ * Displays a 3x3 grid of YouTube thumbnails with subtle animation
+ * Much faster than iframe embeds!
  */
 function VideoGrid({ memberId, videos = [] }) {
-    const [isLoaded, setIsLoaded] = useState(false)
+    const [isVisible, setIsVisible] = useState(false)
 
     useEffect(() => {
-        // Small delay to stagger iframe loading
-        const timer = setTimeout(() => setIsLoaded(true), 500)
+        // Fade in after a short delay
+        const timer = setTimeout(() => setIsVisible(true), 300)
         return () => clearTimeout(timer)
     }, [])
 
-    // Ensure we have exactly 9 videos (or fill with placeholders)
+    // Ensure we have videos to display
     const gridVideos = videos.slice(0, 9)
 
-    // If less than 9 videos, duplicate existing ones to fill the grid
+    // Fill grid with duplicates if needed
     while (gridVideos.length < 9 && videos.length > 0) {
         gridVideos.push(videos[gridVideos.length % videos.length])
     }
 
-    if (!isLoaded || gridVideos.length === 0) {
-        return (
-            <div className="video-grid video-grid-placeholder">
-                <div className="grid-overlay" />
-            </div>
-        )
+    if (gridVideos.length === 0) {
+        return null
     }
 
     return (
-        <div className="video-grid">
+        <div className={`video-grid ${isVisible ? 'visible' : ''}`}>
             <div className="video-grid-inner">
                 {gridVideos.map((video, index) => (
-                    <div key={`${video.id}-${index}`} className="video-cell">
-                        <iframe
-                            src={`https://www.youtube.com/embed/${video.id}?autoplay=1&mute=1&loop=1&playlist=${video.id}&controls=0&showinfo=0&rel=0&modestbranding=1&playsinline=1`}
-                            title={video.title}
-                            frameBorder="0"
-                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    <div
+                        key={`${video.id}-${index}`}
+                        className="video-cell"
+                        style={{ animationDelay: `${index * 0.1}s` }}
+                    >
+                        {/* Use high-quality thumbnail instead of iframe */}
+                        <img
+                            src={`https://img.youtube.com/vi/${video.id}/hqdefault.jpg`}
+                            alt=""
                             loading="lazy"
+                            className="video-thumbnail"
                         />
                     </div>
                 ))}
