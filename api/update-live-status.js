@@ -1,11 +1,9 @@
 /**
  * Vercel Serverless Function: Update Live Status
  * This runs every minute via Vercel Cron to fetch live status from Holodex
- * and cache it in Vercel KV or memory
  */
 
-// In-memory cache (for Vercel Edge Runtime)
-// Note: For production with multiple instances, use Vercel KV
+// In-memory cache
 let cachedLiveStatus = {
     timestamp: 0,
     data: {}
@@ -24,9 +22,6 @@ const MEMBERS = [
 const HOLODEX_API_KEY = process.env.HOLODEX_API_KEY || '';
 const HOLODEX_BASE_URL = 'https://holodex.net/api/v2';
 
-/**
- * Fetch live status from Holodex for a specific channel
- */
 async function checkChannelLive(channelId) {
     try {
         const headers = {};
@@ -61,9 +56,6 @@ async function checkChannelLive(channelId) {
     }
 }
 
-/**
- * Update live status for all members
- */
 async function updateAllLiveStatus() {
     const results = {};
 
@@ -75,19 +67,14 @@ async function updateAllLiveStatus() {
             console.log(`✅ ${member.name} is LIVE!`);
         }
 
-        // Small delay between requests
         await new Promise(resolve => setTimeout(resolve, 100));
     }
 
     return results;
 }
 
-/**
- * Handler for Vercel Cron Job
- * Called every minute to update the cache
- */
-export default async function handler(req, res) {
-    // CORS headers
+// CommonJS export for Vercel
+module.exports = async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
     res.setHeader('Content-Type', 'application/json');
@@ -97,17 +84,12 @@ export default async function handler(req, res) {
     }
 
     try {
-        // Check if this is a cron trigger or just a status request
         const isCronTrigger = req.headers['x-vercel-cron'] === 'true' ||
             req.query.update === 'true';
 
         const now = Date.now();
         const cacheAge = now - cachedLiveStatus.timestamp;
 
-        // Update cache if:
-        // 1. It's a cron trigger
-        // 2. Cache is older than 2 minutes (fallback)
-        // 3. Cache is empty
         if (isCronTrigger || cacheAge > 120000 || !cachedLiveStatus.timestamp) {
             console.log('🔄 Updating live status cache...');
             const newData = await updateAllLiveStatus();
@@ -121,7 +103,6 @@ export default async function handler(req, res) {
             console.log(`✅ Cache updated. ${liveCount} members live.`);
         }
 
-        // Return cached data
         return res.status(200).json({
             success: true,
             timestamp: cachedLiveStatus.timestamp,
@@ -136,4 +117,4 @@ export default async function handler(req, res) {
             error: error.message
         });
     }
-}
+};
