@@ -18,16 +18,16 @@
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     grid-template-rows: repeat(3, 1fr);
-    width: calc(100% + 100px);
-    height: calc(100% + 100px);
-    margin: -50px;
+    width: calc(100% + 120px);
+    height: calc(100% + 120px);
+    margin: -60px;
     gap: 0;
 }
 
 .video-cell {
     position: relative;
-    overflow: visible;
-    background: rgba(0, 0, 0, 0.5);
+    overflow: hidden;
+    background: #0a0a0f;
     animation: cellFadeIn 0.8s ease-out forwards;
     opacity: 0;
 }
@@ -39,11 +39,12 @@
 }
 
 .video-thumbnail {
-    width: calc(100% + 4px);
-    height: calc(100% + 4px);
-    margin: -2px;
+    width: 110%;
+    height: 110%;
+    margin: -5%;
     object-fit: cover;
     display: block;
+    transform: scale(1.05);
 }
 
 /* Continuous slow animation for all thumbnails */
@@ -57,11 +58,11 @@
 
 @keyframes slowZoom {
     from {
-        transform: scale(1.02);
+        transform: scale(1.05);
     }
 
     to {
-        transform: scale(1.15);
+        transform: scale(1.2);
     }
 }
 
