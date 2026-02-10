@@ -34,7 +34,6 @@ function CharacterShowcase() {
     useEffect(() => {
         const fetchVideos = async () => {
             try {
-                // Fetch videos from Holodex directly
                 const videos = await fetchAllMemberVideos(members, 9)
                 setMemberVideos(videos)
             } catch (error) {
@@ -66,7 +65,6 @@ function CharacterShowcase() {
                 pin: true,
                 anticipatePin: 1,
                 onUpdate: (self) => {
-                    // Update active index based on scroll progress
                     const progress = self.progress
                     const newIndex = Math.min(
                         Math.floor(progress * members.length),
@@ -134,10 +132,10 @@ function CharacterShowcase() {
                                         videos={memberVideos[member.id]}
                                     />
                                 )}
-                                {/* Character Image */}
+
+                                {/* Character Image - Left Side */}
                                 <div className="character-image-wrapper">
                                     <div className="character-glow" />
-
                                     <img
                                         src={member.image}
                                         alt={member.name}
@@ -146,13 +144,18 @@ function CharacterShowcase() {
                                     <div className="character-frame" />
                                 </div>
 
-                                {/* Character Info */}
-                                <div className="character-info">
-                                    <span className="character-number">0{index + 1}</span>
-                                    <h3 className="character-name">{member.name}</h3>
-                                    <span className="character-role">{member.role}</span>
+                                {/* Glassmorphism Info Panel - Right Side */}
+                                <div className="glass-panel">
+                                    {/* Watermark Number */}
+                                    <span className="panel-number">0{index + 1}</span>
 
-                                    {/* Live Status Indicator */}
+                                    {/* Name & Role */}
+                                    <div className="panel-header">
+                                        <h3 className="character-name">{member.name}</h3>
+                                        <span className="character-role">{member.role}</span>
+                                    </div>
+
+                                    {/* Live Status */}
                                     <div className="live-status-container">
                                         {isLive ? (
                                             <a
@@ -178,16 +181,24 @@ function CharacterShowcase() {
                                         )}
                                     </div>
 
-                                    <p className="character-description">
-                                        {member.profile.background}
-                                    </p>
+                                    {/* Divider */}
+                                    <div className="panel-divider" />
 
+                                    {/* Scrollable Description */}
+                                    <div className="description-scroll">
+                                        <p className="character-description">
+                                            {member.profile.background}
+                                        </p>
+                                    </div>
+
+                                    {/* Tags */}
                                     <div className="character-tags">
                                         {member.profile.hashtags.map((tag, i) => (
                                             <span key={i} className="tag">{tag}</span>
                                         ))}
                                     </div>
 
+                                    {/* Stats Row */}
                                     <div className="character-meta">
                                         <div className="meta-item">
                                             <span className="meta-label">Birthday</span>
