@@ -1,14 +1,26 @@
-import { useRef, useEffect } from 'react'
+import { useRef, useCallback } from 'react'
 import { motion, useInView } from 'framer-motion'
 import mvVideo from '../assets/Mvtest.mp4'
+import AudioReactiveBackground, { connectAudio } from './AudioReactiveBackground'
 import './MVSection.css'
 
 function MVSection() {
     const sectionRef = useRef(null)
+    const videoRef = useRef(null)
     const isInView = useInView(sectionRef, { once: true, margin: "-100px" })
+
+    // Connect audio analyser when video starts playing
+    const handlePlay = useCallback(() => {
+        if (videoRef.current) {
+            connectAudio(videoRef.current)
+        }
+    }, [])
 
     return (
         <section className="mv-section" ref={sectionRef}>
+            {/* 3D Audio-Reactive Background */}
+            <AudioReactiveBackground />
+
             {/* Background Effects */}
             <div className="mv-bg-gradient" />
             <div className="mv-grid-overlay" />
@@ -52,9 +64,12 @@ function MVSection() {
 
                         {/* Video Player */}
                         <video
+                            ref={videoRef}
                             className="video-player"
                             controls
                             poster=""
+                            onPlay={handlePlay}
+                            crossOrigin="anonymous"
                         >
                             <source src={mvVideo} type="video/mp4" />
                             Your browser does not support the video tag.

@@ -25,8 +25,8 @@ function CharacterShowcase() {
 
         checkStatus()
 
-        // Refresh every 60 seconds
-        const interval = setInterval(checkStatus, 60 * 1000)
+        // Refresh every 30 seconds (matches server cache duration)
+        const interval = setInterval(checkStatus, 30 * 1000)
         return () => clearInterval(interval)
     }, [])
 

@@ -9,27 +9,29 @@
     justify-content: center;
 }
 
-/* Background */
+/* Background - semi-transparent to let 3D particles show */
 .mv-bg-gradient {
     position: absolute;
     inset: 0;
     background: linear-gradient(180deg,
-            #0a0a0f 0%,
-            #1a0a2e 30%,
-            #2a0a3e 50%,
-            #1a0a2e 70%,
-            #0a0a0f 100%);
-    z-index: -2;
+            rgba(10, 10, 15, 0.7) 0%,
+            rgba(26, 10, 46, 0.4) 30%,
+            rgba(42, 10, 62, 0.3) 50%,
+            rgba(26, 10, 46, 0.4) 70%,
+            rgba(10, 10, 15, 0.7) 100%);
+    z-index: 1;
+    pointer-events: none;
 }
 
 .mv-grid-overlay {
     position: absolute;
     inset: 0;
     background-image:
-        linear-gradient(rgba(155, 89, 182, 0.03) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(155, 89, 182, 0.03) 1px, transparent 1px);
+        linear-gradient(rgba(155, 89, 182, 0.02) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(155, 89, 182, 0.02) 1px, transparent 1px);
     background-size: 50px 50px;
-    z-index: -1;
+    z-index: 2;
+    pointer-events: none;
 }
 
 /* Container */
@@ -38,6 +40,8 @@
     width: 100%;
     padding: 0 40px;
     margin: 0 auto;
+    position: relative;
+    z-index: 3;
 }
 
 /* Header */
